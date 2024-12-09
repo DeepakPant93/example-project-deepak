@@ -35,7 +35,7 @@ jobs:
         needs: build-push-docker-image
         environment:
             name: "production"
-            url: ${{ steps.deploy-to-webapp.outputs }}
+            url: ${{ steps.deploy-to-webapp.outputs.fqdn }}
 
         steps:
             - name: Azure Login
