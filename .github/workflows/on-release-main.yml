@@ -8,6 +8,7 @@ on:
 env:
     DOCKER_IMAGE: deepak93p/example_project_deepak # Replace with your DockerHub image
     AZURE_WEBAPP_NAME: example-project-deepak-app # Replace with your Azure Web App name
+    AZURE_WEBAPP_RG: example-project-deepak-rg # Replace with your Azure Web App name
 
 jobs:
     build-push-docker-image:
@@ -42,13 +43,12 @@ jobs:
               with:
                   creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-            - name: Deploy to Azure Web App
-              id: deploy-to-webapp
-              uses: azure/webapps-deploy@v2
-              with:
-                  app-name: "${{ env.AZURE_WEBAPP_NAME }}"
-                  slot-name: "production"
-                  images: "index.docker.io/${{ env.DOCKER_IMAGE }}:${{ github.sha }}"
+            - name: Deploy to Azure Container Apps
+              run: |
+                  az containerapp update \
+                    --name ${{ env.AZURE_WEBAPP_NAME }} \
+                    --resource-group ${{ env.AZURE_WEBAPP_RG }} \
+                    --image index.docker.io/${{ env.DOCKER_IMAGE }}:${{ github.sha }}
 
     publish-to-pypi:
         runs-on: ubuntu-latest
