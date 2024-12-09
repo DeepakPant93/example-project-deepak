@@ -190,4 +190,3 @@ cleanup-local: clean-build clean-docker ## Clean up temporary files and director
 
 .PHONY: cleanup-all
 cleanup-all: cleanup-local delete-env ## Clean up temporary files and directories and destroy the virtual environment, Docker image, and Cloud resources
-
