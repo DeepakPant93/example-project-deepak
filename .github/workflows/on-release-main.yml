@@ -35,7 +35,7 @@ jobs:
         needs: build-push-docker-image
         environment:
             name: "production"
-            url: ${{ steps.deploy-to-webapp }}
+            url: ${{ steps.deploy-to-webapp.outputs.fqdn }}
 
         steps:
             - name: Azure Login
@@ -49,7 +49,9 @@ jobs:
                   az containerapp update \
                     --name ${{ env.AZURE_WEBAPP_NAME }} \
                     --resource-group ${{ env.AZURE_WEBAPP_RG }} \
-                    --image index.docker.io/${{ env.DOCKER_IMAGE }}:${{ github.sha }} --query "properties.configuration.ingress.fqdn"
+                    --image index.docker.io/${{ env.DOCKER_IMAGE }}:${{ github.sha }} \
+                    --query "properties.configuration.ingress.fqdn" \
+                    -o tsv
 
     publish-to-pypi:
         runs-on: ubuntu-latest
