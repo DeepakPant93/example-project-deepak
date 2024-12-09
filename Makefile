@@ -4,8 +4,8 @@
 IMAGE_NAME = deepak93p/example_project_deepak
 TAG = latest
 CLOUD_REGION = eastus
-RESOURCE_GROUP = example_project_deepak-rg
-APP_NAME = example_project_deepak-app
+RESOURCE_GROUP = example-project-deepak-rg
+APP_NAME = example-project-deepak-app
 APP_ENV_NAME = example-project-deepak-app-env
 GITHUB_USERNAME = DeepakPant93
 GITHUB_REPO = example-project-deepak
@@ -48,7 +48,7 @@ setup-env: ## Create resource group, container app environment, and service prin
 	@az group create --name $(RESOURCE_GROUP) --location $(CLOUD_REGION)
 
 	@echo "🚀 Creating container app environment: $(APP_ENV_NAME)"
-	@az containerapp env create --name $(APP_ENV_NAME)-env --resource-group $(RESOURCE_GROUP) --location $(CLOUD_REGION)
+	@az containerapp env create --name $(APP_ENV_NAME) --resource-group $(RESOURCE_GROUP) --location $(CLOUD_REGION)
 
 	@echo "🚀 Fetching subscription ID"
 	@subscription_id=$$(az account show --query "id" -o tsv) && \
@@ -56,10 +56,13 @@ setup-env: ## Create resource group, container app environment, and service prin
 	echo "🚀 Creating service principal for: $(APP_NAME)" && \
 	az ad sp create-for-rbac --name "$(APP_NAME)-service-principal" --role contributor --scopes /subscriptions/$$subscription_id --sdk-auth
 
+	@echo "🚀 Creating container app: $(APP_NAME)"
+	@az containerapp create --name $(APP_NAME) --resource-group $(RESOURCE_GROUP) --environment $(APP_ENV_NAME) --image 'nginx:latest' --target-port 80 --ingress 'external' --query "properties.configuration.ingress.fqdn"
+
 .PHONY: delete-env
 delete-env: ## Delete resource group, container app environment, and service principal
 	@echo "🚀 Deleting service principal for: $(APP_NAME)-service-principal"
-	@sp_object_id=$$(az ad sp list --display-name "$(APP_NAME)-service-principal" --query "[0].objectId" -o tsv) && \
+	@sp_object_id=$$(az ad sp list --display-name "$(APP_NAME)-service-principal" --query "[0].id" -o tsv) && \
 	if [ -n "$$sp_object_id" ]; then \
 		az ad sp delete --id $$sp_object_id; \
 		echo "Service principal deleted"; \

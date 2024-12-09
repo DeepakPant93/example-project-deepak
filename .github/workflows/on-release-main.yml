@@ -7,7 +7,7 @@ on:
 
 env:
     DOCKER_IMAGE: deepak93p/example_project_deepak # Replace with your DockerHub image
-    AZURE_WEBAPP_NAME: example_project_deepak-app # Replace with your Azure Web App name
+    AZURE_WEBAPP_NAME: example-project-deepak-app # Replace with your Azure Web App name
 
 jobs:
     build-push-docker-image:
