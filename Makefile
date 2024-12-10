@@ -142,7 +142,10 @@ dvc-cleanup: ## Clean up DVC and service account
 	@gcloud services disable drive.googleapis.com --project $(GCLOUD_PROJECT_ID) || true
 
 	@echo "Removing DVC initialization"
+	@rm artifacts/*.dvc
 	@rm -rf .dvc
+	@rm dvc.lock
+
 
 	@echo "Cleanup complete"
 
