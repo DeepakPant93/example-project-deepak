@@ -48,7 +48,8 @@ codespell = "^2.2.5"  # Spell checking in code
 wheel = "^0.41.0"  # Build wheels
 twine = "^4.0.0"  # Publish packages
 pytest-runner = "^6.0.0"  # Running tests via `python setup.py test`
-
+dvc = {version = "^3.58.0", extras = ["gdrive"]} # Data version control
+pipdeptree = "^2.24.0"  # Dependency tree visualization
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "^1.5.0"  # Documentation site generator

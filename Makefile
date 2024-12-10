@@ -10,6 +10,9 @@ APP_ENV_NAME = example-project-deepak-app-env
 GITHUB_USERNAME = DeepakPant93
 GITHUB_REPO = example-project-deepak
 PROJECT_SLUG = example_project_deepak
+FOLDER_ID = 1isRnM6FiyMuE8l8ojWD-yzWHe3AdiNFX
+GCLOUD_PROJECT_ID = $(shell gcloud config get-value project)
+SERVICE_ACCOUNT_NAME = example-project-deepak-dvcsa
 
 # =============================
 # Help (Default Target)
@@ -28,6 +31,7 @@ install: ## Install the poetry environment and set up pre-commit hooks
 	@echo "🚀 Creating virtual environment using pyenv and poetry"
 	@poetry install
 	@poetry run pre-commit install
+	@poetry run pip install --upgrade dvc dvc-gdrive pydrive2 pyOpenSSL
 	@poetry shell
 
 .PHONY: git-init
@@ -78,6 +82,69 @@ delete-env: ## Delete resource group, container app environment, and service pri
 
 	@echo "🚀 Deleting resource group: $(RESOURCE_GROUP)"
 	@az group delete --name $(RESOURCE_GROUP) --yes --no-wait || echo "Resource group not found, skipping deletion"
+
+.PHONY: dvc-init
+dvc-init: ## Initialize DVC and set up service account
+	@echo "Initializing the DVC"
+	@poetry run dvc init -f
+
+	@echo "Adding remote connection to the Gdrive"
+	@poetry run dvc remote add -d gdrive_remote gdrive://$(FOLDER_ID)
+	@poetry run dvc remote modify gdrive_remote gdrive_use_service_account true
+
+	@echo "Enabling Google Drive API"
+	@gcloud services enable drive.googleapis.com --project $(GCLOUD_PROJECT_ID)
+
+	@echo "Creating the Service Account"
+	@gcloud iam service-accounts create $(SERVICE_ACCOUNT_NAME) \
+	  --description="Service account for DVC to push data to Google Drive" \
+	  --display-name="DVC Service Account" || echo "$(SERVICE_ACCOUNT_NAME) service account already created."
+
+	@echo "Adding IAM Policy Bindings"
+	@gcloud projects add-iam-policy-binding $(GCLOUD_PROJECT_ID) \
+	  --member="serviceAccount:$(SERVICE_ACCOUNT_NAME)@$(GCLOUD_PROJECT_ID).iam.gserviceaccount.com" \
+	  --role="roles/iam.serviceAccountUser"
+
+	@echo "Creating Service Account Key"
+	@gcloud iam service-accounts keys create ./.dvc/dvc-service-account-key.json \
+	  --iam-account="$(SERVICE_ACCOUNT_NAME)@$(GCLOUD_PROJECT_ID).iam.gserviceaccount.com"
+
+	@echo "Configuring DVC with Service Account Key"
+	@poetry run dvc remote modify gdrive_remote gdrive_service_account_json_file_path ./.dvc/dvc-service-account-key.json
+
+	@echo "Successfully added remote link."
+
+.PHONY: dvc-cleanup
+dvc-cleanup: ## Clean up DVC and service account
+	@echo "Removing DVC remote"
+	@poetry run dvc remote remove gdrive_remote || true
+
+	@echo "Deleting Service Account Keys"
+	@if [ -f ./.dvc/dvc-service-account-key.json ]; then \
+		gcloud iam service-accounts keys delete \
+		$$(gcloud iam service-accounts keys list \
+			--iam-account="$(SERVICE_ACCOUNT_NAME)@$(GCLOUD_PROJECT_ID).iam.gserviceaccount.com" \
+			--format="value(name)" | head -n 1) \
+		--iam-account="$(SERVICE_ACCOUNT_NAME)@$(GCLOUD_PROJECT_ID).iam.gserviceaccount.com" -q || true; \
+		rm -f ./.dvc/dvc-service-account-key.json; \
+	fi
+
+	@echo "Removing IAM Policy Bindings"
+	@gcloud projects remove-iam-policy-binding $(GCLOUD_PROJECT_ID) \
+		--member="serviceAccount:$(SERVICE_ACCOUNT_NAME)@$(GCLOUD_PROJECT_ID).iam.gserviceaccount.com" \
+		--role="roles/iam.serviceAccountUser" || true
+
+	@echo "Deleting Service Account"
+	@gcloud iam service-accounts delete \
+		"$(SERVICE_ACCOUNT_NAME)@$(GCLOUD_PROJECT_ID).iam.gserviceaccount.com" -q || true
+
+	@echo "Disabling Google Drive API"
+	@gcloud services disable drive.googleapis.com --project $(GCLOUD_PROJECT_ID) || true
+
+	@echo "Removing DVC initialization"
+	@rm -rf .dvc
+
+	@echo "Cleanup complete"
 
 # =============================
 # Code Quality and Testing
@@ -175,6 +242,48 @@ clean-docker: ## Clean up Docker resources related to the app
 	@docker ps -aq --filter "status=exited" | xargs -r docker rm || echo "No stopped containers to clean up"
 
 # =============================
+# DVC Operations
+# =============================
+.PHONY: add-data
+add-data: ## Add a data file to DVC and Git, and enable autostage in DVC
+	@echo "Adding $(DATA_FILENAME) to DVC tracking..."
+	@poetry run dvc add artifacts/$(DATA_FILENAME) || true
+	@echo "Staging DVC changes for $(DATA_FILENAME) to Git..."
+	@git add artifacts/.gitignore || true
+	@git add artifacts/$(DATA_FILENAME) || true
+	@echo "Commiting DVC changes for $(DATA_FILENAME) to Git..."
+	@git commit -m "Added $(DATA_FILENAME) to DVC and Git"
+	@echo "Enabling DVC autostage..."
+	@poetry run dvc config core.autostage true
+	@echo "Successfully added $(DATA_FILENAME) to DVC and Git."
+
+.PHONY: push-data
+push-data: ## Push changes to Git
+	@echo "Pushing changes to DVC remote..."
+	@poetry run dvc push
+
+pull-data: ## Push changes to Git
+	@echo "Pulling changes from DVC remote..."
+	@poetry run dvc pull --allow-missing
+
+
+run-dvc-pipeline: ## Run DVC pipeline
+	@echo "Running DVC pipeline..."
+	@poetry run dvc repro
+	@echo "Pipeline completed"
+
+
+# =============================
+# Debug
+# =============================
+
+.PHONY: print-dependency-tree
+print-dependency-tree: ## Initialize DVC and set up service account
+	@echo "Printing dependency tree..."
+	@poetry run pipdeptree -p $(PACKAGE_NAME)
+
+
+# =============================
 # Cleanup
 # =============================
 .PHONY: cleanup-local
@@ -192,4 +301,4 @@ cleanup-local: clean-build clean-docker ## Clean up temporary files and director
 	@echo "🚀 Clean up completed."
 
 .PHONY: cleanup-all
-cleanup-all: cleanup-local delete-env ## Clean up temporary files and directories and destroy the virtual environment, Docker image, and Cloud resources
+cleanup-all: cleanup-local dvc-cleanup delete-env ## Clean up temporary files and directories and destroy the virtual environment, Docker image, and Cloud resources
