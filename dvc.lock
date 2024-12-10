@@ -1,0 +1,4 @@
+schema: '2.0'
+stages:
+  download-data:
+    cmd: dvc pull
