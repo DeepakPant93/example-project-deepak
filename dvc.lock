@@ -2,3 +2,8 @@ schema: '2.0'
 stages:
   download-data:
     cmd: dvc pull
+    deps:
+    - path: artifacts/hi.txt
+      hash: md5
+      md5: 90aadf59da41535d42d67d30b3093c1d
+      size: 21
