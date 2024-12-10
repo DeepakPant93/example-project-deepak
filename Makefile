@@ -73,8 +73,8 @@ delete-env: ## Delete resource group, container app environment, and service pri
 	@echo "🚀 Deleting container app: $(APP_NAME)"
 	@az containerapp delete --name $(APP_NAME) --resource-group $(RESOURCE_GROUP) --yes --no-wait || echo "Container app not found, skipping deletion"
 
-	@echo "🚀 Deleting container app environment: $(APP_ENV_NAME)-env"
-	@az containerapp env delete --name $(APP_ENV_NAME)-env --resource-group $(RESOURCE_GROUP) --yes --no-wait || echo "Container app environment not found, skipping deletion"
+	@echo "🚀 Deleting container app environment: $(APP_ENV_NAME)"
+	@az containerapp env delete --name $(APP_ENV_NAME) --resource-group $(RESOURCE_GROUP) --yes --no-wait || echo "Container app environment not found, skipping deletion"
 
 	@echo "🚀 Deleting resource group: $(RESOURCE_GROUP)"
 	@az group delete --name $(RESOURCE_GROUP) --yes --no-wait || echo "Resource group not found, skipping deletion"
