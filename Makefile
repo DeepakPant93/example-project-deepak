@@ -30,9 +30,17 @@ help: ## Display this help message
 install: ## Install the poetry environment and set up pre-commit hooks
 	@echo "🚀 Creating virtual environment using pyenv and poetry"
 	@poetry install
-	@poetry run pre-commit install
 	@poetry run pip install --upgrade dvc dvc-gdrive pydrive2 pyOpenSSL
+	@poetry run pre-commit install
 	@poetry shell
+
+.PHONY: uninstall
+uninstall: ## Remove the poetry environment
+	@echo "🚀 Removing virtual environment"
+	@rm -rf .venv
+
+.PHONY: reinstall
+reinstall: uninstall install ## Install the poetry environment and set up pre-commit hooks
 
 .PHONY: git-init
 git-init: ## Initialize git repository

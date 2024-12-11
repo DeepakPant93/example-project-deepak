@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: example_project_debugger",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/example_project_deepak/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "jinja": true
+        }
+    ]
+}
